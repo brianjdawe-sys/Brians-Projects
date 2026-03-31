@@ -522,8 +522,21 @@ var S={
   overrides:_hov,comments:{},incidents:[],tab:'schedule',
   year:CY,sel:null,rmc:null,gon:3,gxon:0,goff:2,gxoff:0,collapsed:{}
 };
+// ── Stable key — never bump this again ─────────────────────────────────────
+var LS_KEY='moems_scheduler';
+// Migrate from any old versioned keys
+(function(){
+  var oldKeys=['moems_v13','moems_v14','moems_v15','moems_v16','moems_v17'];
+  if(!localStorage.getItem(LS_KEY)){
+    for(var ki=oldKeys.length-1;ki>=0;ki--){
+      var old=localStorage.getItem(oldKeys[ki]);
+      if(old){try{localStorage.setItem(LS_KEY,old);}catch(e){}break;}
+    }
+  }
+  oldKeys.forEach(function(k){try{localStorage.removeItem(k);}catch(e){}});
+})();
 try{
-  var raw=localStorage.getItem('moems_v17');
+  var raw=localStorage.getItem(LS_KEY);
   if(raw){
     var d=JSON.parse(raw);
     // Always pin rotation schedule from TEAM0 — never trust stale localStorage values
@@ -739,7 +752,7 @@ function workDaysSince(mem,sinceDs){
 function daysBetween(a,b){return Math.round((new Date(b+'T00:00:00')-new Date(a+'T00:00:00'))/86400000);}
 
 function save(){
-  try{localStorage.setItem('moems_v17',JSON.stringify({dataVersion:2,team:S.team,overrides:S.overrides,comments:S.comments,incidents:S.incidents,year:S.year,gon:S.gon,gxon:S.gxon,goff:S.goff,gxoff:S.gxoff,collapsed:S.collapsed}));}catch(e){}
+  try{localStorage.setItem(LS_KEY,JSON.stringify({dataVersion:2,team:S.team,overrides:S.overrides,comments:S.comments,incidents:S.incidents,year:S.year,gon:S.gon,gxon:S.gxon,goff:S.goff,gxoff:S.gxoff,collapsed:S.collapsed}));}catch(e){}
 }
 
 function segLabel(seg){
