@@ -524,55 +524,28 @@ var S={
 };
 // ── Stable key — never bump this again ─────────────────────────────────────
 var LS_KEY='moems_scheduler';
-// Migrate from any old versioned keys
-(function(){
-  var oldKeys=['moems_v13','moems_v14','moems_v15','moems_v16','moems_v17'];
-  if(!localStorage.getItem(LS_KEY)){
-    for(var ki=oldKeys.length-1;ki>=0;ki--){
-      var old=localStorage.getItem(oldKeys[ki]);
-      if(old){try{localStorage.setItem(LS_KEY,old);}catch(e){}break;}
-    }
-  }
-  oldKeys.forEach(function(k){try{localStorage.removeItem(k);}catch(e){}});
-})();
 try{
   var raw=localStorage.getItem(LS_KEY);
   if(raw){
     var d=JSON.parse(raw);
-    // Always pin rotation schedule from TEAM0 — never trust stale localStorage values
-    // Only restore user-editable fields: name, vacBal, renewDate, endDate, expat docs, travelDays, workMode
-    S.team=TEAM0.map(function(base){
-      // Find saved counterpart by id
-      var saved=(d.team||[]).filter(function(x){return x.id===base.id;})[0]||{};
-      var obj=Object.assign({},base);
-      // Restore only user-editable fields from saved data
-      if(saved.name)obj.name=saved.name;
-      if(saved.vacBal!=null)obj.vacBal=saved.vacBal;
-      if(saved.annualBal!=null)obj.annualBal=saved.annualBal;
-      if(saved.renewDate)obj.renewDate=saved.renewDate;
-      if(saved.lastRenewalYear)obj.lastRenewalYear=saved.lastRenewalYear;
-      if(saved.travelDays!=null)obj.travelDays=saved.travelDays;
-      if(saved.workMode)obj.workMode=saved.workMode;
-      if(saved.endDate)obj.endDate=saved.endDate;
-      if(saved.isExpat!=null)obj.isExpat=saved.isExpat;
-      if(saved.ltwpExpiry)obj.ltwpExpiry=saved.ltwpExpiry;
-      if(saved.ltwpNote)obj.ltwpNote=saved.ltwpNote;
-      if(saved.visaExpiry)obj.visaExpiry=saved.visaExpiry;
-      if(saved.visaNote)obj.visaNote=saved.visaNote;
-      if(saved.pauses)obj.pauses=saved.pauses;
-      // Rebuild segment from TEAM0 values — rotation schedule is never overridden by saved data
-      obj.segments=[{id:'s0',startDate:base.rotStart,weeksOn:base.weeksOn,xDaysOn:0,weeksOff:base.weeksOff,xDaysOff:0}];
-      return obj;
-    });
+    if(d.team&&d.team.length){
+      S.team=d.team.map(function(t){
+        var segs=t.segments&&t.segments.length?t.segments:[{id:'s0',startDate:t.rotStart||'2026-01-01',weeksOn:t.weeksOn||21,xDaysOn:0,weeksOff:t.weeksOff||14,xDaysOff:0}];
+        var obj={id:t.id,name:t.name||'',segments:segs,
+                 weeksOn:t.weeksOn||21,xDaysOn:0,weeksOff:t.weeksOff||14,xDaysOff:0,
+                 rotStart:t.rotStart||'2026-01-01',annualBal:t.annualBal||22,vacBal:t.vacBal||0,
+                 workMode:t.workMode||'rotation',isExpat:t.isExpat||false,travelDays:t.travelDays||1};
+        ['endDate','renewDate','lastRenewalYear','ltwpExpiry','ltwpNote','visaExpiry','visaNote','pauses'].forEach(function(k){if(t[k]!=null)obj[k]=t[k];});
+        return obj;
+      });
+    }
     S.overrides=d.overrides||{};
-    // Merge historical overrides (never overwrite user data)
-    for(var hds in HISTORICAL_OVERRIDES){if(!S.overrides[hds])S.overrides[hds]=Object.assign({},HISTORICAL_OVERRIDES[hds]);}S.comments=d.comments||{};
+    S.comments=d.comments||{};
     S.incidents=d.incidents||[];
-    if(d.year)S.year=d.year;if(d.gon!=null)S.gon=d.gon;if(d.gxon!=null)S.gxon=d.gxon;
-    if(d.goff!=null)S.goff=d.goff;if(d.gxoff!=null)S.gxoff=d.gxoff;
+    if(d.year)S.year=d.year;
     if(d.collapsed)S.collapsed=d.collapsed;
   }
-}catch(e){}
+}catch(e){console.error('Load failed',e);}
 
 function p2(n){return n<10?'0'+n:''+n;}
 function fmtD(y,m,d){return y+'-'+p2(m+1)+'-'+p2(d);}
@@ -752,7 +725,8 @@ function workDaysSince(mem,sinceDs){
 function daysBetween(a,b){return Math.round((new Date(b+'T00:00:00')-new Date(a+'T00:00:00'))/86400000);}
 
 function save(){
-  try{localStorage.setItem(LS_KEY,JSON.stringify({dataVersion:2,team:S.team,overrides:S.overrides,comments:S.comments,incidents:S.incidents,year:S.year,gon:S.gon,gxon:S.gxon,goff:S.goff,gxoff:S.gxoff,collapsed:S.collapsed}));}catch(e){}
+  try{localStorage.setItem(LS_KEY,JSON.stringify({team:S.team,overrides:S.overrides,comments:S.comments,incidents:S.incidents,year:S.year,collapsed:S.collapsed}));}
+  catch(e){console.error('Save failed',e);}
 }
 
 function segLabel(seg){
