@@ -1056,7 +1056,7 @@ function rSet(){
         // Weeks ON row
         h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">';
         h+='<span style="width:90px;font-size:11px;font-weight:600;color:#2e7d32">Days ON</span>';
-        h+='<input type="number" id="seg-won-'+seg.id+'" min="0" max="99" value="'+(seg.weeksOn||0)+'" '
+        h+='<input type="number" id="seg-won-'+seg.id+'" min="0" max="99" onfocus="this.select()" value="'+(seg.weeksOn||0)+'" '
           +'style="width:60px;text-align:center;font-size:12px;font-weight:700;border:2px solid #a5d6a7;border-radius:4px;padding:3px">';
         h+='<span style="font-size:10px;color:#888">days</span>';
         h+='</div>';
@@ -1064,7 +1064,7 @@ function rSet(){
         // Weeks OFF row
         h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">';
         h+='<span style="width:90px;font-size:11px;font-weight:600;color:#c62828">Days OFF</span>';
-        h+='<input type="number" id="seg-woff-'+seg.id+'" min="0" max="99" value="'+(seg.weeksOff||0)+'" '
+        h+='<input type="number" id="seg-woff-'+seg.id+'" min="0" max="99" onfocus="this.select()" value="'+(seg.weeksOff||0)+'" '
           +'style="width:60px;text-align:center;font-size:12px;font-weight:700;border:2px solid #ef9a9a;border-radius:4px;padding:3px">';
         h+='<span style="font-size:10px;color:#888">days</span>';
         h+='</div>';
@@ -1075,38 +1075,17 @@ function rSet(){
         h+='</div>';
         h+='</div>';
       });
-
-      // Add new period
-      h+='<div style="border:1px dashed #c0dde0;border-radius:6px;background:#f8fcfc;padding:10px 12px;margin-bottom:10px">';
-      h+='<div style="font-size:10px;font-weight:700;color:#005a52;margin-bottom:8px">+ Add new rotation period</div>';
-      h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">';
-      h+='<span style="font-size:10px;color:#666;width:72px">Start date</span>';
-      h+='<input type="date" id="new-seg-sd-'+m.id+'" value="'+TSTR+'" style="font-size:11px;padding:3px 6px;border:1px solid #ccc;border-radius:4px">';
-      h+='</div>';
-      h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">';
-      h+='<span style="width:90px;font-size:11px;font-weight:600;color:#2e7d32">Days ON</span>';
-      h+='<input type="number" id="new-seg-won-'+m.id+'" min="0" max="99" value="21" style="width:60px;text-align:center;font-size:12px;font-weight:700;border:2px solid #a5d6a7;border-radius:4px;padding:3px">';
-      h+='<span style="font-size:10px;color:#888">days</span>';
-      h+='</div>';
-      h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">';
-      h+='<span style="width:90px;font-size:11px;font-weight:600;color:#c62828">Days OFF</span>';
-      h+='<input type="number" id="new-seg-woff-'+m.id+'" min="0" max="99" value="14" style="width:60px;text-align:center;font-size:12px;font-weight:700;border:2px solid #ef9a9a;border-radius:4px;padding:3px">';
-      h+='<span style="font-size:10px;color:#888">days</span>';
-      h+='</div>';
-      h+='<button class="savebtn" onclick="addSeg(\''+m.id+'\')" style="background:#d97706">+ Add period</button>';
-      h+='<div style="font-size:9px;color:#aaa;margin-top:5px">Use for schedule changes — e.g. a delayed rotation start.</div>';
-      h+='</div>';
     }
 
     // ── Vacation & entitlements ───────────────────────────────────────────
     h+=divider();
     h+=sh('&#127958;','Vacation & entitlements');
     h+=row('Annual allocation',
-      '<input type="number" min="0" value="'+m.annualBal+'" onchange="UM(\''+m.id+'\',\'annualBal\',this.value)" '
+      '<input type="number" min="0" value="'+m.annualBal+'" onfocus="this.select()" onchange="UM(\''+m.id+'\',\'annualBal\',this.value)" '
       +'style="width:54px;text-align:center;font-size:13px;font-weight:700;border:2px solid #c0dde0;border-radius:4px;padding:3px">',
       'days/year');
     h+=row('Current balance',
-      '<input type="number" min="0" value="'+m.vacBal+'" onchange="UVB(\''+m.id+'\',this.value)" '
+      '<input type="number" min="0" value="'+m.vacBal+'" onfocus="this.select()" onchange="UVB(\''+m.id+'\',this.value)" '
       +'style="width:54px;text-align:center;font-size:13px;font-weight:700;border:2px solid #c0dde0;border-radius:4px;padding:3px">',
       'days available now');
     h+=row('Balance renews',
@@ -1114,21 +1093,23 @@ function rSet(){
       +'style="width:64px;text-align:center;font-size:12px;border:1px solid #ccc;border-radius:4px;padding:4px">',
       m.renewDate?'adds '+m.annualBal+' days each year on this date':'e.g. 03-01 for March 1st');
 
-    // ── Travel ───────────────────────────────────────────────────────────
-    h+=divider();
-    h+=sh('&#9992;','Travel days');
-    var td=m.travelDays||1;
-    h+='<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">';
-    h+='<span style="font-size:11px;color:#555;width:130px;flex-shrink:0">Days each side of rotation</span>';
-    h+='<span style="font-size:9px;color:#aaa">1</span>';
-    h+='<input type="range" min="1" max="5" value="'+td+'" '
-      +'oninput="setTD(\''+m.id+'\',this.value);document.getElementById(\'tdv-'+m.id+'\').textContent=this.value" '
-      +'style="width:100px;accent-color:#005a52">';
-    h+='<span style="font-size:9px;color:#aaa">5</span>';
-    h+='<span id="tdv-'+m.id+'" style="font-size:14px;font-weight:700;color:#005a52;min-width:18px;text-align:center">'+td+'</span>';
-    h+='<span style="font-size:10px;color:#888">day'+(td===1?'':'s')+'</span>';
-    h+='</div>';
-    h+='<div style="font-size:10px;color:#aaa;margin-bottom:8px">Travel days appear in yellow at the start and end of every off period.</div>';
+    // ── Travel (rotation + flexible only — not standard 5-day) ────────────
+    if(m.workMode!=='standard'){
+      h+=divider();
+      h+=sh('&#9992;','Travel days');
+      var td=m.travelDays||1;
+      h+='<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">';
+      h+='<span style="font-size:11px;color:#555;width:130px;flex-shrink:0">Days each side of rotation</span>';
+      h+='<span style="font-size:9px;color:#aaa">1</span>';
+      h+='<input type="range" min="1" max="5" value="'+td+'" '
+        +'oninput="setTD(\''+m.id+'\',this.value);document.getElementById(\'tdv-'+m.id+'\').textContent=this.value" '
+        +'style="width:100px;accent-color:#005a52">';
+      h+='<span style="font-size:9px;color:#aaa">5</span>';
+      h+='<span id="tdv-'+m.id+'" style="font-size:14px;font-weight:700;color:#005a52;min-width:18px;text-align:center">'+td+'</span>';
+      h+='<span style="font-size:10px;color:#888">day'+(td===1?'':'s')+'</span>';
+      h+='</div>';
+      h+='<div style="font-size:10px;color:#aaa;margin-bottom:8px">Travel days appear in yellow at the start and end of every off period.</div>';
+    }
 
     // ── Employment status ─────────────────────────────────────────────────
     // ── Rotation pause ─────────────────────────────────────────────────────
