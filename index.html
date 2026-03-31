@@ -789,8 +789,8 @@ function rMon(mem,y,mo,selDs){
     var inner='<div style="font-size:8px;font-weight:700;line-height:1">'+d+'</div>';
     if(isHol)inner+='<div style="font-size:6px;font-weight:700;line-height:1;margin-top:1px">'+holType+'</div>';
     if(hasCom)inner+='<div style="width:5px;height:5px;border-radius:50%;background:#FF8C00;margin-top:1px"></div>';
-    var canClick=isAdmin&&!past;
-    h+='<div '+(canClick?'onclick="pick(\''+mem.id+'\',\''+s+'\')"':'')+' title="'+tooltip+'" style="height:'+CH+'px;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:2px;'+(past?'opacity:0.4;':'')+(canClick?'cursor:pointer;':'')+'background:'+hx(c.bg)+';color:'+hx(c.fg)+';'+ol+'">'+inner+'</div>';
+    var canClick=isAdmin;
+    h+='<div '+(canClick?'onclick="pick(\''+mem.id+'\',\''+s+'\')"':'')+' title="'+tooltip+'" style="height:'+CH+'px;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:2px;'+(past&&!isAdmin?'opacity:0.4;':past?'opacity:0.6;':'')+(canClick?'cursor:pointer;':'')+'background:'+hx(c.bg)+';color:'+hx(c.fg)+';'+ol+'">'+inner+'</div>';
   }
   h+='</div></div>';return h;
 }
@@ -819,7 +819,7 @@ function rPerson(mem){
     h+='<div class="card-strip">';
     for(var mo=0;mo<12;mo++)h+=rMon(mem,S.year,mo,selDs);
     h+='</div>';
-    if(isAdmin&&selDs&&!isPast(selDs)){
+    if(isAdmin&&selDs){
       var dObj=new Date(selDs+'T00:00:00');
       var dL=dObj.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
       var curSt=dSt(mem,selDs),curCmt=getComment(mem.id,selDs);
@@ -854,7 +854,7 @@ function rSched(){
   h+='<button class="xbtn" onclick="EX()">&#8595; Excel</button>';
   h+='<button class="xbtn" onclick="PDF()" style="background:#8B0000">&#8595; PDF</button>';
   h+='</div></div>';
-  if(isAdmin)h+='<div style="font-size:10px;color:#7a5800;margin-bottom:12px;background:#fffbe6;border:1px solid #ffe58f;padding:6px 12px;border-radius:4px;display:inline-block">Past days are locked. Click any upcoming weekday to mark it. Orange dot = note.</div>';
+  if(isAdmin)h+='<div style="font-size:10px;color:#7a5800;margin-bottom:12px;background:#fffbe6;border:1px solid #ffe58f;padding:6px 12px;border-radius:4px;display:inline-block">Click any day to mark it. Past days shown at reduced opacity. Orange dot = note.</div>';
   for(var i=0;i<S.team.length;i++)h+=rPerson(S.team[i]);
   h+='<div class="leg">';
   var lk=['working','off','flexible_off','vacation','holiday_mz','holiday_ca','holiday_both','travel','sick','left'];
@@ -1220,11 +1220,10 @@ function render(){
 
 window.ST=function(t){S.tab=t;S.sel=null;S.rmc=null;save();render();};
 window.SY=function(y){S.year=y;S.sel=null;save();render();};
-window.pick=function(mid,s){if(isPast(s))return;if(!isAdmin){requireAdmin(function(){if(!isPast(s)){S.sel={mid:mid,ds:s};render();}});return;}S.sel=(S.sel&&S.sel.mid===mid&&S.sel.ds===s)?null:{mid:mid,ds:s};render();};
+window.pick=function(mid,s){if(!isAdmin){requireAdmin(function(){S.sel={mid:mid,ds:s};render();});return;}S.sel=(S.sel&&S.sel.mid===mid&&S.sel.ds===s)?null:{mid:mid,ds:s};render();};
 window.CP=function(){S.sel=null;render();};
 window.TOG=function(id){if(!S.collapsed)S.collapsed={};S.collapsed[id]=!S.collapsed[id];S.sel=null;save();render();};
 window.SS=function(mid,s,st){
-  if(isPast(s))return;
   if(!isAdmin){requireAdmin(function(){window.SS(mid,s,st);});return;}
   if(!S.overrides[s])S.overrides[s]={};
   if(S.overrides[s][mid]===st){
@@ -1251,7 +1250,7 @@ window.SS=function(mid,s,st){
   }
   save();render();
 };
-window.CS=function(mid,s){if(isPast(s)||!isAdmin)return;if(S.overrides[s]){delete S.overrides[s][mid];if(!Object.keys(S.overrides[s]).length)delete S.overrides[s];}save();render();};
+window.CS=function(mid,s){if(!isAdmin)return;if(S.overrides[s]){delete S.overrides[s][mid];if(!Object.keys(S.overrides[s]).length)delete S.overrides[s];}save();render();};
 window.SC=function(mid,ds){var el=document.getElementById('cmt_'+mid+'_'+ds);if(!el)return;setComment(mid,ds,el.value);render();};
 window.UVB=function(id,v){if(!isAdmin)return;var m=S.team.filter(function(t){return t.id===id;})[0];if(m)m.vacBal=parseInt(v)||0;save();render();};
 window.setTD=function(id,v){
