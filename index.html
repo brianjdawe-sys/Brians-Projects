@@ -357,24 +357,161 @@ var TEAM0=[
 ];
 // Historical overrides — all known vacation days from original spreadsheet
 var HISTORICAL_OVERRIDES={
-  // ── Nuro (t1) ──────────────────────────────────────────────────────────────
-  // Dec 2025: vacation Dec 6-10 (5 days, during his OFF block Dec 8 onward — first 2 are on OFF, rest on OFF)
-  // Note: Dec 6-7 are last days of Nuro's ON block (rotStart Dec 29 means his PREV cycle
-  // would have him OFF from approx Nov-Dec). The spreadsheet shows these as vacation.
-  '2025-12-06':{'t1':'vacation'},'2025-12-07':{'t1':'vacation'},
-  '2025-12-08':{'t1':'vacation'},'2025-12-09':{'t1':'vacation'},'2025-12-10':{'t1':'vacation'},
-  // Jan 2026: vacation Jan 9-12 (4 days, during ON block Jan 1-18)
-  '2026-01-09':{'t1':'vacation'},'2026-01-10':{'t1':'vacation'},
-  '2026-01-11':{'t1':'vacation'},'2026-01-12':{'t1':'vacation'},
-  // ── Beato (t2) ─────────────────────────────────────────────────────────────
-  // Nov 2025: vacation Nov 5-7 (3 days)
-  '2025-11-05':{'t2':'vacation'},'2025-11-06':{'t2':'vacation'},'2025-11-07':{'t2':'vacation'},
-  // Dec 2025: vacation Dec 1-2, Dec 5, Dec 10 (4 days)
-  '2025-12-01':{'t2':'vacation'},'2025-12-02':{'t2':'vacation'},
-  '2025-12-05':{'t2':'vacation'},'2025-12-10':{'t2':'vacation'},
-  // ── Pack (t3) — left 2026-03-06, no additional vacation recorded ───────────
-  // ── Alistair (t4) — no vacation recorded yet ──────────────────────────────
-  // ── Godfrey (t5) — flexible, mark working days manually ───────────────────
+  // ── All working days Nov 2025 – Mar 31 2026 hardcoded from spreadsheet ───
+  // Rotations: Nuro start Nov 27, Beato Nov 20, Pack Nov 13, Alistair Nov 06
+  // 21 days ON / 14 days OFF, 7-day stagger between each person
+  // Vacation days below OVERRIDE these (applied after in dSt priority)
+  '2025-11-01':{'t1':'working','t2':'working'},
+  '2025-11-02':{'t1':'working','t2':'working'},
+  '2025-11-03':{'t1':'working','t2':'working'},
+  '2025-11-04':{'t1':'working','t2':'working'},
+  '2025-11-05':{'t1':'working','t2':'working'},
+  '2025-11-06':{'t1':'working','t4':'working'},
+  '2025-11-07':{'t1':'working','t4':'working'},
+  '2025-11-08':{'t1':'working','t4':'working'},
+  '2025-11-09':{'t1':'working','t4':'working'},
+  '2025-11-10':{'t1':'working','t4':'working'},
+  '2025-11-11':{'t1':'working','t4':'working'},
+  '2025-11-12':{'t1':'working','t4':'working'},
+  '2025-11-13':{'t3':'working','t4':'working'},
+  '2025-11-14':{'t3':'working','t4':'working'},
+  '2025-11-15':{'t3':'working','t4':'working'},
+  '2025-11-16':{'t3':'working','t4':'working'},
+  '2025-11-17':{'t3':'working','t4':'working'},
+  '2025-11-18':{'t3':'working','t4':'working'},
+  '2025-11-19':{'t3':'working','t4':'working'},
+  '2025-11-20':{'t2':'working','t3':'working','t4':'working'},
+  '2025-11-21':{'t2':'working','t3':'working','t4':'working'},
+  '2025-11-22':{'t2':'working','t3':'working','t4':'working'},
+  '2025-11-23':{'t2':'working','t3':'working','t4':'working'},
+  '2025-11-24':{'t2':'working','t3':'working','t4':'working'},
+  '2025-11-25':{'t2':'working','t3':'working','t4':'working'},
+  '2025-11-26':{'t2':'working','t3':'working','t4':'working'},
+  '2025-11-27':{'t1':'working','t2':'working','t3':'working'},
+  '2025-11-28':{'t1':'working','t2':'working','t3':'working'},
+  '2025-11-29':{'t1':'working','t2':'working','t3':'working'},
+  '2025-11-30':{'t1':'working','t2':'working','t3':'working'},
+  '2025-12-01':{'t1':'working','t2':'working','t3':'working'},
+  '2025-12-02':{'t1':'working','t2':'working','t3':'working'},
+  '2025-12-03':{'t1':'working','t2':'working','t3':'working'},
+  '2025-12-04':{'t1':'working','t2':'working'},
+  '2025-12-05':{'t1':'working','t2':'working'},
+  '2025-12-06':{'t1':'working','t2':'working'},
+  '2025-12-07':{'t1':'working','t2':'working'},
+  '2025-12-08':{'t1':'working','t2':'working'},
+  '2025-12-09':{'t1':'working','t2':'working'},
+  '2025-12-10':{'t1':'working','t2':'working'},
+  '2025-12-11':{'t1':'working','t4':'working'},
+  '2025-12-12':{'t1':'working','t4':'working'},
+  '2025-12-13':{'t1':'working','t4':'working'},
+  '2025-12-14':{'t1':'working','t4':'working'},
+  '2025-12-15':{'t1':'working','t4':'working'},
+  '2025-12-16':{'t1':'working','t4':'working'},
+  '2025-12-17':{'t1':'working','t4':'working'},
+  '2025-12-18':{'t3':'working','t4':'working'},
+  '2025-12-19':{'t3':'working','t4':'working'},
+  '2025-12-20':{'t3':'working','t4':'working'},
+  '2025-12-21':{'t3':'working','t4':'working'},
+  '2025-12-22':{'t3':'working','t4':'working'},
+  '2025-12-23':{'t3':'working','t4':'working'},
+  '2025-12-24':{'t3':'working','t4':'working'},
+  '2025-12-25':{'t2':'working','t3':'working','t4':'working'},
+  '2025-12-26':{'t2':'working','t3':'working','t4':'working'},
+  '2025-12-27':{'t2':'working','t3':'working','t4':'working'},
+  '2025-12-28':{'t2':'working','t3':'working','t4':'working'},
+  '2025-12-29':{'t2':'working','t3':'working','t4':'working'},
+  '2025-12-30':{'t2':'working','t3':'working','t4':'working'},
+  '2025-12-31':{'t2':'working','t3':'working','t4':'working'},
+  '2026-01-01':{'t1':'working','t2':'working','t3':'working'},
+  '2026-01-02':{'t1':'working','t2':'working','t3':'working'},
+  '2026-01-03':{'t1':'working','t2':'working','t3':'working'},
+  '2026-01-04':{'t1':'working','t2':'working','t3':'working'},
+  '2026-01-05':{'t1':'working','t2':'working','t3':'working'},
+  '2026-01-06':{'t1':'working','t2':'working','t3':'working'},
+  '2026-01-07':{'t1':'working','t2':'working','t3':'working'},
+  '2026-01-08':{'t1':'working','t2':'working'},
+  '2026-01-09':{'t1':'working','t2':'working'},
+  '2026-01-10':{'t1':'working','t2':'working'},
+  '2026-01-11':{'t1':'working','t2':'working'},
+  '2026-01-12':{'t1':'working','t2':'working'},
+  '2026-01-13':{'t1':'working','t2':'working'},
+  '2026-01-14':{'t1':'working','t2':'working'},
+  '2026-01-15':{'t1':'working','t4':'working'},
+  '2026-01-16':{'t1':'working','t4':'working'},
+  '2026-01-17':{'t1':'working','t4':'working'},
+  '2026-01-18':{'t1':'working','t4':'working'},
+  '2026-01-19':{'t1':'working','t4':'working'},
+  '2026-01-20':{'t1':'working','t4':'working'},
+  '2026-01-21':{'t1':'working','t4':'working'},
+  '2026-01-22':{'t3':'working','t4':'working'},
+  '2026-01-23':{'t3':'working','t4':'working'},
+  '2026-01-24':{'t3':'working','t4':'working'},
+  '2026-01-25':{'t3':'working','t4':'working'},
+  '2026-01-26':{'t3':'working','t4':'working'},
+  '2026-01-27':{'t3':'working','t4':'working'},
+  '2026-01-28':{'t3':'working','t4':'working'},
+  '2026-01-29':{'t2':'working','t3':'working','t4':'working'},
+  '2026-01-30':{'t2':'working','t3':'working','t4':'working'},
+  '2026-01-31':{'t2':'working','t3':'working','t4':'working'},
+  '2026-02-01':{'t2':'working','t3':'working','t4':'working'},
+  '2026-02-02':{'t2':'working','t3':'working','t4':'working'},
+  '2026-02-03':{'t2':'working','t3':'working','t4':'working'},
+  '2026-02-04':{'t2':'working','t3':'working','t4':'working'},
+  '2026-02-05':{'t1':'working','t2':'working','t3':'working'},
+  '2026-02-06':{'t1':'working','t2':'working','t3':'working'},
+  '2026-02-07':{'t1':'working','t2':'working','t3':'working'},
+  '2026-02-08':{'t1':'working','t2':'working','t3':'working'},
+  '2026-02-09':{'t1':'working','t2':'working','t3':'working'},
+  '2026-02-10':{'t1':'working','t2':'working','t3':'working'},
+  '2026-02-11':{'t1':'working','t2':'working','t3':'working'},
+  '2026-02-12':{'t1':'working','t2':'working'},
+  '2026-02-13':{'t1':'working','t2':'working'},
+  '2026-02-14':{'t1':'working','t2':'working'},
+  '2026-02-15':{'t1':'working','t2':'working'},
+  '2026-02-16':{'t1':'working','t2':'working'},
+  '2026-02-17':{'t1':'working','t2':'working'},
+  '2026-02-18':{'t1':'working','t2':'working'},
+  '2026-02-19':{'t1':'working','t4':'working'},
+  '2026-02-20':{'t1':'working','t4':'working'},
+  '2026-02-21':{'t1':'working','t4':'working'},
+  '2026-02-22':{'t1':'working','t4':'working'},
+  '2026-02-23':{'t1':'working','t4':'working'},
+  '2026-02-24':{'t1':'working','t4':'working'},
+  '2026-02-25':{'t1':'working','t4':'working'},
+  '2026-02-26':{'t3':'working','t4':'working'},
+  '2026-02-27':{'t3':'working','t4':'working'},
+  '2026-02-28':{'t3':'working','t4':'working'},
+  '2026-03-01':{'t3':'working','t4':'working'},
+  '2026-03-02':{'t3':'working','t4':'working'},
+  '2026-03-03':{'t3':'working','t4':'working'},
+  '2026-03-04':{'t3':'working','t4':'working'},
+  '2026-03-05':{'t2':'working','t3':'working','t4':'working'},
+  '2026-03-06':{'t2':'working','t3':'working','t4':'working'},
+  '2026-03-07':{'t2':'working','t4':'working'},
+  '2026-03-08':{'t2':'working','t4':'working'},
+  '2026-03-09':{'t2':'working','t4':'working'},
+  '2026-03-10':{'t2':'working','t4':'working'},
+  '2026-03-11':{'t2':'working','t4':'working'},
+  '2026-03-12':{'t1':'working','t2':'working'},
+  '2026-03-13':{'t1':'working','t2':'working'},
+  '2026-03-14':{'t1':'working','t2':'working'},
+  '2026-03-15':{'t1':'working','t2':'working'},
+  '2026-03-16':{'t1':'working','t2':'working'},
+  '2026-03-17':{'t1':'working','t2':'working'},
+  '2026-03-18':{'t1':'working','t2':'working'},
+  '2026-03-19':{'t1':'working','t2':'working'},
+  '2026-03-20':{'t1':'working','t2':'working'},
+  '2026-03-21':{'t1':'working','t2':'working'},
+  '2026-03-22':{'t1':'working','t2':'working'},
+  '2026-03-23':{'t1':'working','t2':'working'},
+  '2026-03-24':{'t1':'working','t2':'working'},
+  '2026-03-25':{'t1':'working','t2':'working'},
+  '2026-03-26':{'t1':'working','t4':'working'},
+  '2026-03-27':{'t1':'working','t4':'working'},
+  '2026-03-28':{'t1':'working','t4':'working'},
+  '2026-03-29':{'t1':'working','t4':'working'},
+  '2026-03-30':{'t1':'working','t4':'working'},
+  '2026-03-31':{'t1':'working','t4':'working'}
 };
 var now=new Date();
 var CY=now.getFullYear();
@@ -386,10 +523,34 @@ var S={
   year:CY,sel:null,rmc:null,gon:3,gxon:0,goff:2,gxoff:0,collapsed:{}
 };
 try{
-  var raw=localStorage.getItem('moems_v14');
+  var raw=localStorage.getItem('moems_v17');
   if(raw){
     var d=JSON.parse(raw);
-    S.team=(d.team||TEAM0).map(function(t){var segs=t.segments&&t.segments.length?t.segments:[{id:'s0',startDate:t.rotStart||'2025-01-01',weeksOn:t.weeksOn||0,xDaysOn:t.xDaysOn||0,weeksOff:t.weeksOff||0,xDaysOff:t.xDaysOff||0}];var obj={id:t.id||'t'+Math.random(),name:t.name||'',segments:segs,weeksOn:t.weeksOn||0,xDaysOn:t.xDaysOn||0,weeksOff:t.weeksOff||0,xDaysOff:t.xDaysOff||0,rotStart:t.rotStart||'2026-01-01',annualBal:t.annualBal||22,vacBal:t.vacBal||0,workMode:t.workMode||'rotation',isExpat:t.isExpat||false};if(t.endDate)obj.endDate=t.endDate;if(t.ltwpExpiry)obj.ltwpExpiry=t.ltwpExpiry;if(t.visaExpiry)obj.visaExpiry=t.visaExpiry;if(t.ltwpNote)obj.ltwpNote=t.ltwpNote;if(t.visaNote)obj.visaNote=t.visaNote;if(t.renewDate)obj.renewDate=t.renewDate;if(t.lastRenewalYear)obj.lastRenewalYear=t.lastRenewalYear;obj.travelDays=t.travelDays||1;return obj;});
+    // Always pin rotation schedule from TEAM0 — never trust stale localStorage values
+    // Only restore user-editable fields: name, vacBal, renewDate, endDate, expat docs, travelDays, workMode
+    S.team=TEAM0.map(function(base){
+      // Find saved counterpart by id
+      var saved=(d.team||[]).filter(function(x){return x.id===base.id;})[0]||{};
+      var obj=Object.assign({},base);
+      // Restore only user-editable fields from saved data
+      if(saved.name)obj.name=saved.name;
+      if(saved.vacBal!=null)obj.vacBal=saved.vacBal;
+      if(saved.annualBal!=null)obj.annualBal=saved.annualBal;
+      if(saved.renewDate)obj.renewDate=saved.renewDate;
+      if(saved.lastRenewalYear)obj.lastRenewalYear=saved.lastRenewalYear;
+      if(saved.travelDays!=null)obj.travelDays=saved.travelDays;
+      if(saved.workMode)obj.workMode=saved.workMode;
+      if(saved.endDate)obj.endDate=saved.endDate;
+      if(saved.isExpat!=null)obj.isExpat=saved.isExpat;
+      if(saved.ltwpExpiry)obj.ltwpExpiry=saved.ltwpExpiry;
+      if(saved.ltwpNote)obj.ltwpNote=saved.ltwpNote;
+      if(saved.visaExpiry)obj.visaExpiry=saved.visaExpiry;
+      if(saved.visaNote)obj.visaNote=saved.visaNote;
+      if(saved.pauses)obj.pauses=saved.pauses;
+      // Rebuild segment from TEAM0 values — rotation schedule is never overridden by saved data
+      obj.segments=[{id:'s0',startDate:base.rotStart,weeksOn:base.weeksOn,xDaysOn:0,weeksOff:base.weeksOff,xDaysOff:0}];
+      return obj;
+    });
     S.overrides=d.overrides||{};
     // Merge historical overrides (never overwrite user data)
     for(var hds in HISTORICAL_OVERRIDES){if(!S.overrides[hds])S.overrides[hds]=Object.assign({},HISTORICAL_OVERRIDES[hds]);}S.comments=d.comments||{};
@@ -410,7 +571,7 @@ function getSegments(mem){
   if(mem.segments&&mem.segments.length>0){
     return mem.segments.slice().sort(function(a,b){return a.startDate>b.startDate?1:-1;});
   }
-  return [{id:'s0',startDate:mem.rotStart||'2025-01-01',weeksOn:mem.weeksOn||3,xDaysOn:mem.xDaysOn||0,weeksOff:mem.weeksOff||2,xDaysOff:mem.xDaysOff||0}];
+  return [{id:'s0',startDate:mem.rotStart||'2025-01-01',weeksOn:mem.weeksOn||21,xDaysOn:mem.xDaysOn||0,weeksOff:mem.weeksOff||14,xDaysOff:mem.xDaysOff||0}];
 }
 function activeSegment(mem,s){
   var segs=getSegments(mem);
@@ -420,12 +581,39 @@ function activeSegment(mem,s){
 }
 function totalOn(seg){return(seg.weeksOn||0)+(seg.xDaysOn||0);}
 function totalOff(seg){return(seg.weeksOff||0)+(seg.xDaysOff||0);}
+// ── Pause helpers ────────────────────────────────────────────────────────
+function isPaused(mem,s){
+  if(!mem.pauses||!mem.pauses.length)return false;
+  for(var i=0;i<mem.pauses.length;i++){
+    var p=mem.pauses[i];
+    if(s>=p.from&&s<=p.to)return true;
+  }
+  return false;
+}
+function pausedDaysBefore(mem,s){
+  // Count how many days in pauses fall between seg.startDate and s (exclusive of s)
+  if(!mem.pauses||!mem.pauses.length)return 0;
+  var total=0;
+  for(var i=0;i<mem.pauses.length;i++){
+    var p=mem.pauses[i];
+    var pf=p.from,pt=p.to;
+    // clamp to [segStart, s)
+    if(pt>=s)pt=new Date(new Date(s+'T00:00:00')-86400000).toISOString().slice(0,10);
+    if(pf>pt)continue;
+    var a=new Date(pf+'T00:00:00'),b=new Date(pt+'T00:00:00');
+    total+=Math.round((b-a)/86400000)+1;
+  }
+  return total;
+}
 function rotOn(mem,s){
+  if(isPaused(mem,s))return false;
   var seg=activeSegment(mem,s);
   var ton=totalOn(seg),toff=totalOff(seg);
   if(ton<=0)return false;if(toff<=0)return true;
   var t0=new Date(seg.startDate+'T00:00:00'),t1=new Date(s+'T00:00:00');
-  var diff=Math.round((t1-t0)/86400000),cyc=ton+toff;
+  var rawDiff=Math.round((t1-t0)/86400000);
+  // Subtract paused days so cycle continues where it left off
+  var diff=rawDiff-pausedDaysBefore(mem,s),cyc=ton+toff;
   return((diff%cyc)+cyc)%cyc<ton;
 }
 // ── Auto-travel day computation ──────────────────────────────────────────
@@ -551,7 +739,7 @@ function workDaysSince(mem,sinceDs){
 function daysBetween(a,b){return Math.round((new Date(b+'T00:00:00')-new Date(a+'T00:00:00'))/86400000);}
 
 function save(){
-  try{localStorage.setItem('moems_v14',JSON.stringify({dataVersion:2,team:S.team,overrides:S.overrides,comments:S.comments,incidents:S.incidents,year:S.year,gon:S.gon,gxon:S.gxon,goff:S.goff,gxoff:S.gxoff,collapsed:S.collapsed}));}catch(e){}
+  try{localStorage.setItem('moems_v17',JSON.stringify({dataVersion:2,team:S.team,overrides:S.overrides,comments:S.comments,incidents:S.incidents,year:S.year,gon:S.gon,gxon:S.gxon,goff:S.goff,gxoff:S.gxoff,collapsed:S.collapsed}));}catch(e){}
 }
 
 function segLabel(seg){
@@ -943,6 +1131,30 @@ function rSet(){
     h+='<div style="font-size:10px;color:#aaa;margin-bottom:8px">Travel days appear in yellow at the start and end of every off period.</div>';
 
     // ── Employment status ─────────────────────────────────────────────────
+    // ── Rotation pause ─────────────────────────────────────────────────────
+    if(m.workMode==='rotation'){
+      h+=divider();
+      h+=sh('&#9208;','Rotation pauses');
+      h+='<div style="font-size:10px;color:#888;margin-bottom:8px">Use this if the rotation stops for a period (flood, logistics delay, etc.). The cycle resumes where it left off when the pause ends.</div>';
+      if(m.pauses&&m.pauses.length){
+        m.pauses.forEach(function(p,pi){
+          h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;padding:6px 10px;background:#fff8e8;border:1px solid #ffe082;border-radius:5px">';
+          h+='<span style="font-size:11px;font-weight:700;color:#7a5800">&#9208; Paused</span>';
+          h+='<span style="font-size:11px;color:#555">'+p.from+' &rarr; '+p.to+'</span>';
+          var days=Math.round((new Date(p.to+'T00:00:00')-new Date(p.from+'T00:00:00'))/86400000)+1;
+          h+='<span style="font-size:10px;color:#aaa">('+days+' days)</span>';
+          h+='<button onclick="delPause(\''+m.id+'\','+pi+')" style="margin-left:auto;background:none;border:none;color:#c62828;font-size:14px;cursor:pointer;padding:0 4px">&times;</button>';
+          h+='</div>';
+        });
+      }
+      h+='<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">';
+      h+='<span style="font-size:11px;color:#555;width:60px">Stop</span>';
+      h+='<input type="date" id="pause-from-'+m.id+'" style="font-size:11px;padding:3px 6px;border:1px solid #ccc;border-radius:4px">';
+      h+='<span style="font-size:11px;color:#555">Resume</span>';
+      h+='<input type="date" id="pause-to-'+m.id+'" style="font-size:11px;padding:3px 6px;border:1px solid #ccc;border-radius:4px">';
+      h+='<button class="savebtn" onclick="addPause(\''+m.id+'\')" style="background:#d97706">Add pause</button>';
+      h+='</div>';
+    }
     h+=divider();
     h+=sh('&#128203;','Employment status');
     h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">';
@@ -1115,6 +1327,24 @@ window.setEndDate=function(id,v){
   var m=S.team.filter(function(t){return t.id===id;})[0];if(!m)return;
   if(v)m.endDate=v;else delete m.endDate;
   save();render();
+};
+window.addPause=function(id){
+  if(!isAdmin)return;
+  var m=S.team.filter(function(t){return t.id===id;})[0];if(!m)return;
+  var fromEl=document.getElementById('pause-from-'+id);
+  var toEl=document.getElementById('pause-to-'+id);
+  if(!fromEl||!toEl)return;
+  var from=fromEl.value,to=toEl.value;
+  if(!from||!to||from>to)return;
+  if(!m.pauses)m.pauses=[];
+  m.pauses.push({from:from,to:to});
+  invalidateTravelCache();save();render();
+};
+window.delPause=function(id,idx){
+  if(!isAdmin)return;
+  var m=S.team.filter(function(t){return t.id===id;})[0];if(!m||!m.pauses)return;
+  m.pauses.splice(idx,1);
+  invalidateTravelCache();save();render();
 };
 window.setExpat=function(id,val){
   if(!isAdmin)return;
