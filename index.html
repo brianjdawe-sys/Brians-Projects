@@ -208,8 +208,22 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#005a52}
 </div>
 
 <script>
+// Global error catcher — shows any crash visibly instead of silent blank page
+window.onerror=function(msg,src,line,col,err){
+  var app=document.getElementById('app');
+  if(app)app.innerHTML='<div style="margin:24px;padding:20px;background:#fff3f3;border:2px solid #f00;border-radius:8px;font-family:monospace;font-size:13px;color:#900">'
+    +'<b>JavaScript Error (please screenshot):</b><br><br>'
+    +msg+'<br><br>Line: '+line+', Col: '+col
+    +(err?'<br><br>Stack:<br>'+String(err.stack).replace(/\n/g,'<br>'):'')
+    +'</div>';
+  return false;
+};
 (function(){
 var now=new Date(),CY=now.getFullYear();
+function p2(n){return n<10?'0'+n:''+n;}
+function fmtD(y,m,d){return y+'-'+p2(m+1)+'-'+p2(d);}
+function fmtDate(s){var d=new Date(s+'T00:00:00');return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}
+var TSTR=fmtD(now.getFullYear(),now.getMonth(),now.getDate());
 var ADMIN_USER='admin',ADMIN_PASS='admin';
 var ALLOWED_EMAILS=['bdawe@streamflo.com','emacintosh@streamflo.com','jwakeford@streamflo.com'];
 var isAdmin=false,pendingAction=null;
@@ -391,10 +405,6 @@ try{
   if(raw)applyLoadedData(JSON.parse(raw));
 }catch(e){console.error('localStorage load failed',e);}
 
-function p2(n){return n<10?'0'+n:''+n;}
-function fmtD(y,m,d){return y+'-'+p2(m+1)+'-'+p2(d);}
-function fmtDate(s){var d=new Date(s+'T00:00:00');return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}
-var TSTR=fmtD(now.getFullYear(),now.getMonth(),now.getDate());
 function isPast(s){return s<TSTR;}
 function getSegments(mem){
   // Return sorted segments array. Migrate legacy single-segment format.
