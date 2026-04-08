@@ -190,8 +190,8 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#005a52}
       <div class="page-name">Rotation Scheduler</div>
     </div>
   </div>
-  <div class="sp-header-right">
-    <span id="role-badge" class="sp-badge view">VIEW ONLY</span>
+  <div class="sp-header-right" style="gap:8px">
+    <span id="sync-badge" style="font-size:10px;color:#a0d4b0"></span><span id="role-badge" class="sp-badge view">VIEW ONLY</span>
     <button id="auth-btn" class="sp-btn" onclick="toggleAuth()">Admin Login</button>
   </div>
 </div>
@@ -350,28 +350,46 @@ var S={
 };
 // ── Stable key — never bump this again ─────────────────────────────────────
 var LS_KEY='moems_scheduler';
+var GH_REPO='brianjdawe-sys/Brians-Projects';
+var GH_FILE='moems_data.json';
+var GH_RAW='https://raw.githubusercontent.com/brianjdawe-sys/Brians-Projects/main/moems_data.json';
+var GH_API='https://api.github.com/repos/brianjdawe-sys/Brians-Projects/contents/moems_data.json';
+var GH_TOKEN_KEY='moems_gh_token';
+var _ghSyncing=false;
+function ghToken(){try{return localStorage.getItem(GH_TOKEN_KEY)||'';}catch(e){return'';}}
+function setGhToken(t){try{if(t)localStorage.setItem(GH_TOKEN_KEY,t);else localStorage.removeItem(GH_TOKEN_KEY);}catch(e){}}
+var _lastSyncTime=null;
+function updateSyncBadge(msg,ok){
+  var el=document.getElementById('sync-badge');
+  if(!el)return;
+  el.textContent=msg;
+  el.style.color=ok?'#2e7d32':ok===false?'#c62828':'#888';
+}
+function applyLoadedData(d){
+  if(!d)return;
+  if(d.team&&d.team.length){
+    S.team=d.team.map(function(t){
+      var segs=t.segments&&t.segments.length?t.segments:[{id:'s0',startDate:t.rotStart||'2026-01-01',weeksOn:t.weeksOn||21,xDaysOn:0,weeksOff:t.weeksOff||14,xDaysOff:0}];
+      var obj={id:t.id,name:t.name||'',segments:segs,
+               weeksOn:t.weeksOn||21,xDaysOn:0,weeksOff:t.weeksOff||14,xDaysOff:0,
+               rotStart:t.rotStart||'2026-01-01',annualBal:t.annualBal||22,vacBal:t.vacBal||0,
+               workMode:t.workMode||'rotation',isExpat:t.isExpat||false,travelDays:t.travelDays||1};
+      ['endDate','renewDate','lastRenewalYear','ltwpExpiry','ltwpNote','visaExpiry','visaNote','pauses'].forEach(function(k){if(t[k]!=null)obj[k]=t[k];});
+      return obj;
+    });
+  }
+  S.overrides=d.overrides||{};
+  S.comments=d.comments||{};
+  S.incidents=d.incidents||[];
+  if(d.year)S.year=d.year;
+  if(d.collapsed)S.collapsed=d.collapsed;
+  invalidateTravelCache();
+}
+// Load from localStorage first (instant), then pull from GitHub
 try{
   var raw=localStorage.getItem(LS_KEY);
-  if(raw){
-    var d=JSON.parse(raw);
-    if(d.team&&d.team.length){
-      S.team=d.team.map(function(t){
-        var segs=t.segments&&t.segments.length?t.segments:[{id:'s0',startDate:t.rotStart||'2026-01-01',weeksOn:t.weeksOn||21,xDaysOn:0,weeksOff:t.weeksOff||14,xDaysOff:0}];
-        var obj={id:t.id,name:t.name||'',segments:segs,
-                 weeksOn:t.weeksOn||21,xDaysOn:0,weeksOff:t.weeksOff||14,xDaysOff:0,
-                 rotStart:t.rotStart||'2026-01-01',annualBal:t.annualBal||22,vacBal:t.vacBal||0,
-                 workMode:t.workMode||'rotation',isExpat:t.isExpat||false,travelDays:t.travelDays||1};
-        ['endDate','renewDate','lastRenewalYear','ltwpExpiry','ltwpNote','visaExpiry','visaNote','pauses'].forEach(function(k){if(t[k]!=null)obj[k]=t[k];});
-        return obj;
-      });
-    }
-    S.overrides=d.overrides||{};
-    S.comments=d.comments||{};
-    S.incidents=d.incidents||[];
-    if(d.year)S.year=d.year;
-    if(d.collapsed)S.collapsed=d.collapsed;
-  }
-}catch(e){console.error('Load failed',e);}
+  if(raw)applyLoadedData(JSON.parse(raw));
+}catch(e){console.error('localStorage load failed',e);}
 
 function p2(n){return n<10?'0'+n:''+n;}
 function fmtD(y,m,d){return y+'-'+p2(m+1)+'-'+p2(d);}
@@ -550,9 +568,94 @@ function workDaysSince(mem,sinceDs){
 }
 function daysBetween(a,b){return Math.round((new Date(b+'T00:00:00')-new Date(a+'T00:00:00'))/86400000);}
 
+window.exportData=function(){
+  var raw=localStorage.getItem(LS_KEY);
+  if(!raw){alert('No data to export.');return;}
+  var blob=new Blob([raw],{type:'application/json'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='moems_backup_'+new Date().toISOString().slice(0,10)+'.json';
+  a.click();
+};
+window.importData=function(){
+  var inp=document.createElement('input');
+  inp.type='file';inp.accept='.json,application/json';
+  inp.onchange=function(e){
+    var file=e.target.files[0];if(!file)return;
+    var reader=new FileReader();
+    reader.onload=function(ev){
+      try{
+        var d=JSON.parse(ev.target.result);
+        localStorage.setItem(LS_KEY,ev.target.result);
+        // Reload the page to apply imported data
+        location.reload();
+      }catch(err){alert('Invalid backup file.');}
+    };
+    reader.readAsText(file);
+  };
+  inp.click();
+};
+function dataPayload(){
+  return JSON.stringify({team:S.team,overrides:S.overrides,comments:S.comments,incidents:S.incidents,year:S.year,collapsed:S.collapsed},null,2);
+}
 function save(){
-  try{localStorage.setItem(LS_KEY,JSON.stringify({team:S.team,overrides:S.overrides,comments:S.comments,incidents:S.incidents,year:S.year,collapsed:S.collapsed}));}
-  catch(e){console.error('Save failed',e);}
+  // Always write to localStorage immediately (sync, instant)
+  try{localStorage.setItem(LS_KEY,dataPayload());}catch(e){console.error('localStorage save failed',e);}
+  // Then push to GitHub async (so UI never blocks)
+  pushToGitHub();
+}
+function pushToGitHub(){
+  var tok=ghToken();
+  if(!tok||_ghSyncing)return;
+  _ghSyncing=true;
+  updateSyncBadge('Syncing…','');
+  var payload=dataPayload();
+  // First GET to retrieve current SHA (required for update)
+  fetch(GH_API,{headers:{'Authorization':'token '+tok,'Accept':'application/vnd.github.v3+json'}})
+    .then(function(r){return r.ok?r.json():null;})
+    .then(function(meta){
+      var sha=meta&&meta.sha?meta.sha:undefined;
+      var body={message:'MOEMs data update '+new Date().toISOString(),
+                content:btoa(unescape(encodeURIComponent(payload)))};
+      if(sha)body.sha=sha;
+      return fetch(GH_API,{
+        method:'PUT',
+        headers:{'Authorization':'token '+tok,'Accept':'application/vnd.github.v3+json','Content-Type':'application/json'},
+        body:JSON.stringify(body)
+      });
+    })
+    .then(function(r){
+      _ghSyncing=false;
+      if(r&&(r.status===200||r.status===201)){
+        _lastSyncTime=new Date();
+        updateSyncBadge('✓ Synced '+_lastSyncTime.toLocaleTimeString(),true);
+      } else {
+        updateSyncBadge('⚠ Sync failed (check token)',false);
+      }
+    })
+    .catch(function(e){
+      _ghSyncing=false;
+      updateSyncBadge('⚠ Sync error: '+e.message,false);
+      console.error('GitHub push error:',e);
+    });
+}
+function pullFromGitHub(callback){
+  // Fetch with cache-bust so we always get fresh data
+  fetch(GH_RAW+'?_='+Date.now(),{cache:'no-store'})
+    .then(function(r){return r.ok?r.json():null;})
+    .then(function(d){
+      if(d&&d.team){
+        // Remote wins — it's the source of truth
+        applyLoadedData(d);
+        try{localStorage.setItem(LS_KEY,JSON.stringify(d));}catch(e){}
+        updateSyncBadge('✓ Loaded from GitHub',true);
+      }
+      if(callback)callback();
+    })
+    .catch(function(){
+      // Remote unavailable — silently use localStorage
+      if(callback)callback();
+    });
 }
 
 function segLabel(seg){
@@ -655,7 +758,17 @@ function rSched(){
   h+='<button class="xbtn" onclick="PDF()" style="background:#8B0000">&#8595; PDF</button>';
   h+='</div></div>';
   if(isAdmin)h+='<div style="font-size:10px;color:#7a5800;margin-bottom:12px;background:#fffbe6;border:1px solid #ffe58f;padding:6px 12px;border-radius:4px;display:inline-block">Click any day to mark it. Past days shown at reduced opacity. Orange dot = note.</div>';
-  for(var i=0;i<S.team.length;i++)h+=rPerson(S.team[i]);
+  if(S.team.length===0){
+    h+='<div style="text-align:center;padding:60px 20px;color:#888">';
+    h+='<div style="font-size:48px;margin-bottom:16px">&#128101;</div>';
+    h+='<div style="font-size:18px;font-weight:700;color:#005a52;margin-bottom:8px">No team members yet</div>';
+    h+='<div style="font-size:13px;margin-bottom:20px">Go to <b>Settings</b> to add your team, or import saved data below.</div>';
+    if(isAdmin)h+='<button onclick="ST(\'settings\')" style="background:#005a52;color:#fff;border:none;padding:10px 24px;border-radius:6px;font-size:13px;cursor:pointer;margin-right:8px">Go to Settings</button>';
+    h+='<button onclick="importData()" style="background:#1565c0;color:#fff;border:none;padding:10px 24px;border-radius:6px;font-size:13px;cursor:pointer">&#8593; Import saved data</button>';
+    h+='</div>';
+  } else {
+    for(var i=0;i<S.team.length;i++)h+=rPerson(S.team[i]);
+  }
   h+='<div class="leg">';
   var lk=['working','off','flexible_off','vacation','holiday_mz','holiday_ca','holiday_both','travel','sick','left'];
   for(var j=0;j<lk.length;j++){if(!COLORS[lk[j]])continue;var c=COLORS[lk[j]];h+='<div class="li"><div class="ld" style="background:'+hx(c.bg)+';border:1px solid '+hx(c.fg)+'"></div>'+c.lbl+'</div>';}
@@ -792,6 +905,27 @@ function rData(){
 function rSet(){
   if(!isAdmin)return '<div class="view-notice">&#128274; Settings are only available to admins.</div>';
   var h='';
+  // ── GitHub Sync section ────────────────────────────────────────────────────
+  var tok=ghToken();
+  h+='<div style="background:#f0f7ff;border:1px solid #b5d0f5;border-radius:8px;padding:14px 16px;margin-bottom:18px">';
+  h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">';
+  h+='<span style="font-size:15px">&#9729;</span>';
+  h+='<span style="font-size:13px;font-weight:700;color:#1565c0">GitHub Sync</span>';
+  h+='<span id="sync-badge" style="font-size:11px;margin-left:8px;color:#888">'+(tok?'Token set':'No token — enter below to enable sync')+'</span>';
+  h+='</div>';
+  h+='<div style="font-size:11px;color:#444;margin-bottom:10px">Enter a GitHub Personal Access Token with <b>Contents: Read &amp; Write</b> on this repo. Once set, all browsers sync automatically.</div>';
+  h+='<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">';
+  h+='<input type="password" id="gh-tok-inp" placeholder="ghp_xxxxxxxxxxxx" value="'+(tok?'(token saved)':'')+'" style="flex:1;min-width:200px;font-size:12px;padding:6px 8px;border:1px solid #b5d0f5;border-radius:4px;font-family:monospace">';
+  h+='<button onclick="saveGhToken()" style="background:#1565c0;color:#fff;border:none;padding:6px 14px;border-radius:4px;font-size:12px;cursor:pointer">Save token</button>';
+  if(tok)h+='<button onclick="clearGhToken()" style="background:#c62828;color:#fff;border:none;padding:6px 14px;border-radius:4px;font-size:12px;cursor:pointer">Clear</button>';
+  if(tok)h+='<button onclick="pushToGitHub()" style="background:#2e7d32;color:#fff;border:none;padding:6px 14px;border-radius:4px;font-size:12px;cursor:pointer">&#8593; Push now</button>';
+  h+='</div>';
+  h+='<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">';
+  h+='<button onclick="exportData()" style="background:#555;color:#fff;border:none;padding:5px 12px;border-radius:4px;font-size:11px;cursor:pointer">&#8595; Export backup</button>';
+  h+='<button onclick="importData()" style="background:#555;color:#fff;border:none;padding:5px 12px;border-radius:4px;font-size:11px;cursor:pointer">&#8593; Import backup</button>';
+  h+='<span style="font-size:10px;color:#888;align-self:center">Manual file backup (no token needed)</span>';
+  h+='</div>';
+  h+='</div>';
 
   // ── Section header helper ──
   function sh(icon,title,sub){
@@ -1169,6 +1303,16 @@ window.setDocNote=function(id,docType,v){
   var m=S.team.filter(function(t){return t.id===id;})[0];if(!m)return;
   if(docType==='ltwp')m.ltwpNote=v;else m.visaNote=v;
   save();render();
+};
+window.saveGhToken=function(){
+  var inp=document.getElementById('gh-tok-inp');
+  if(!inp)return;
+  var t=inp.value.trim();
+  if(t&&t!=='(token saved)'){setGhToken(t);alert('Token saved. GitHub sync is now active.');}
+  render();
+};
+window.clearGhToken=function(){
+  setGhToken('');render();
 };
 window.AM=function(){if(!isAdmin)return;var inp=document.getElementById('nmi');if(!inp||!inp.value.trim())return;var n=new Date();var startDate=n.getFullYear()+'-'+p2(n.getMonth()+1)+'-'+p2(n.getDate());S.team.push({id:'t'+Date.now(),name:inp.value.trim(),segments:[{id:'s'+Date.now(),startDate:startDate,weeksOn:21,xDaysOn:0,weeksOff:14,xDaysOff:0}],annualBal:22,vacBal:0,workMode:'rotation',isExpat:false,travelDays:1});save();render();};
 window.addInc=function(){
@@ -1700,10 +1844,23 @@ function doImmigExport(){
   writeFile(wb,'MOEMs_ImmigrationReport_'+new Date().getFullYear()+'.xlsx');
 }
 
+function startup(){
+  checkRenewals();
+  if(ghToken()){
+    // Try to pull fresh data from GitHub, then render
+    updateSyncBadge('Loading…','');
+    pullFromGitHub(function(){
+      checkRenewals();
+      render();
+    });
+  } else {
+    render();
+  }
+}
 if(document.readyState==='loading'){
-  document.addEventListener('DOMContentLoaded',function(){checkRenewals();render();});
+  document.addEventListener('DOMContentLoaded',startup);
 }else{
-  checkRenewals();render();
+  startup();
 }
 })();
 </script>
