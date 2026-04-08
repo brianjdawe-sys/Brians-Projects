@@ -677,6 +677,8 @@ window.importData=function(){
   };
   inp.click();
 };
+window.jbPull=jbPull;
+window.jbPush=jbPush;
 function save(){
   try{localStorage.setItem(LS_KEY,jbPayload());}catch(e){console.error('localStorage failed:',e);}
   jbPush();
