@@ -1006,16 +1006,26 @@ function rSet(){
 }
 
 function render(){
-  var app=document.getElementById('app');if(!app)return;
+  var app=document.getElementById('app');
+  if(!app){
+    setTimeout(render,50); // DOM not ready yet, retry
+    return;
+  }
   var tabs=['schedule','vacation','data','settings'];
   tabs.forEach(function(t){
     var el=document.getElementById('tab-'+t);
     if(el)el.className='sp-tab'+(S.tab===t?' act':'');
   });
-  if(S.tab==='schedule')app.innerHTML=rSched();
-  else if(S.tab==='vacation')app.innerHTML=rVac();
-  else if(S.tab==='data')app.innerHTML=rData();
-  else app.innerHTML=rSet();
+  try{
+    if(S.tab==='schedule')app.innerHTML=rSched();
+    else if(S.tab==='vacation')app.innerHTML=rVac();
+    else if(S.tab==='data')app.innerHTML=rData();
+    else app.innerHTML=rSet();
+  }catch(e){
+    app.innerHTML='<div style="padding:20px;color:#c00;font-family:monospace;background:#fff3f3;border:1px solid #fcc;border-radius:6px;margin:20px">'
+      +'<b>Render error (please screenshot and report):</b><br>'+e.message+'<br><pre style="font-size:11px;margin-top:8px">'+e.stack+'</pre></div>';
+    console.error('MOEMs render error:',e);
+  }
 }
 
 window.ST=function(t){S.tab=t;S.sel=null;S.rmc=null;save();render();};
