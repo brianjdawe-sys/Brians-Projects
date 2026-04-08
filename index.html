@@ -191,7 +191,9 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#005a52}
     </div>
   </div>
   <div class="sp-header-right" style="gap:8px">
-    <span id="sync-badge" style="font-size:10px;color:#a0d4b0;margin-right:4px"></span><span id="role-badge" class="sp-badge view">VIEW ONLY</span>
+    <span id="sync-badge" style="font-size:10px;color:#a0d4b0"></span>
+    <button id="sync-btn" onclick="jbPull(function(){render();})" title="Pull latest data" style="background:none;border:1px solid rgba(255,255,255,0.35);color:#fff;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:16px;line-height:1;padding:0">&#8635;</button>
+    <span id="role-badge" class="sp-badge view">VIEW ONLY</span>
     <button id="auth-btn" class="sp-btn" onclick="toggleAuth()">Admin Login</button>
   </div>
 </div>
@@ -227,6 +229,8 @@ var TSTR=fmtD(now.getFullYear(),now.getMonth(),now.getDate());
 var ADMIN_USER='admin',ADMIN_PASS='admin';
 var ALLOWED_EMAILS=['bdawe@streamflo.com','emacintosh@streamflo.com','jwakeford@streamflo.com'];
 var isAdmin=false,pendingAction=null;
+// Restore admin session across page refreshes
+try{if(sessionStorage.getItem('moems_admin')==='1')isAdmin=true;}catch(e){}
 // Passwords stored in localStorage under key 'moems_epw_<email>'
 function getStoredPw(email){try{return localStorage.getItem('moems_epw_'+email)||null;}catch(e){return null;}}
 function storePw(email,pw){try{localStorage.setItem('moems_epw_'+email,pw);}catch(e){}}
@@ -285,7 +289,9 @@ function createEmailPw(){
   grantAdmin();
 }
 function grantAdmin(){
-  isAdmin=true;closeLO();updateAuthUI();
+  isAdmin=true;
+  try{sessionStorage.setItem('moems_admin','1');}catch(e){}
+  closeLO();updateAuthUI();
   if(pendingAction){var fn=pendingAction;pendingAction=null;fn();}
   render();
 }
@@ -314,7 +320,7 @@ function updateAuthUI(){
   if(isAdmin){b.className='sp-badge admin';b.textContent='ADMIN';btn.textContent='Sign Out';}
   else{b.className='sp-badge view';b.textContent='VIEW ONLY';btn.textContent='Admin Login';}
 }
-window.toggleAuth=function(){if(isAdmin){isAdmin=false;updateAuthUI();render();}else{requireAdmin(function(){render();});}};
+window.toggleAuth=function(){if(isAdmin){isAdmin=false;try{sessionStorage.removeItem('moems_admin');}catch(e){}updateAuthUI();render();}else{requireAdmin(function(){render();});}};
 window.doLogin=doLogin;
 window.closeLO=closeLO;
 window.emailNext=emailNext;
