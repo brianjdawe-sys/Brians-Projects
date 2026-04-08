@@ -364,20 +364,23 @@ var S={
 };
 // ── Stable key — never bump this again ─────────────────────────────────────
 var LS_KEY='moems_scheduler';
-var GH_REPO='brianjdawe-sys/Brians-Projects';
-var GH_FILE='moems_data.json';
-var GH_RAW='https://raw.githubusercontent.com/brianjdawe-sys/Brians-Projects/main/moems_data.json';
-var GH_API='https://api.github.com/repos/brianjdawe-sys/Brians-Projects/contents/moems_data.json';
-var GH_TOKEN_KEY='moems_gh_token';
-var _ghSyncing=false;
-function ghToken(){try{return localStorage.getItem(GH_TOKEN_KEY)||'';}catch(e){return'';}}
-function setGhToken(t){try{if(t)localStorage.setItem(GH_TOKEN_KEY,t);else localStorage.removeItem(GH_TOKEN_KEY);}catch(e){}}
-var _lastSyncTime=null;
+// ── Firebase Realtime Database sync ─────────────────────────────────────────
+// Set FIREBASE_URL to your Firebase Realtime Database URL, e.g.:
+// https://your-project-default-rtdb.firebaseio.com
+// Leave empty to use localStorage only.
+var FIREBASE_URL='';
+var FIREBASE_PATH='/moems.json';
+var _fbSyncing=false;
+function fbUrl(){
+  // Admin can override via localStorage for testing
+  try{var ov=localStorage.getItem('moems_fb_url');if(ov)return ov;}catch(e){}
+  return FIREBASE_URL;
+}
 function updateSyncBadge(msg,ok){
   var el=document.getElementById('sync-badge');
   if(!el)return;
   el.textContent=msg;
-  el.style.color=ok?'#2e7d32':ok===false?'#c62828':'#888';
+  el.style.color=ok?'#a0d4b0':ok===false?'#ffaaaa':'#ccc';
 }
 function applyLoadedData(d){
   if(!d)return;
@@ -606,64 +609,49 @@ window.importData=function(){
   inp.click();
 };
 function dataPayload(){
-  return JSON.stringify({team:S.team,overrides:S.overrides,comments:S.comments,incidents:S.incidents,year:S.year,collapsed:S.collapsed},null,2);
+  return JSON.stringify({team:S.team,overrides:S.overrides,comments:S.comments,incidents:S.incidents,year:S.year,collapsed:S.collapsed});
 }
 function save(){
-  // Always write to localStorage immediately (sync, instant)
+  // Write to localStorage immediately (instant, works offline)
   try{localStorage.setItem(LS_KEY,dataPayload());}catch(e){console.error('localStorage save failed',e);}
-  // Then push to GitHub async (so UI never blocks)
-  pushToGitHub();
+  // Push to Firebase async
+  pushToFirebase();
 }
-function pushToGitHub(){
-  var tok=ghToken();
-  if(!tok||_ghSyncing)return;
-  _ghSyncing=true;
-  updateSyncBadge('Syncing…','');
-  var payload=dataPayload();
-  // First GET to retrieve current SHA (required for update)
-  fetch(GH_API,{headers:{'Authorization':'token '+tok,'Accept':'application/vnd.github.v3+json'}})
-    .then(function(r){return r.ok?r.json():null;})
-    .then(function(meta){
-      var sha=meta&&meta.sha?meta.sha:undefined;
-      var body={message:'MOEMs data update '+new Date().toISOString(),
-                content:btoa(unescape(encodeURIComponent(payload)))};
-      if(sha)body.sha=sha;
-      return fetch(GH_API,{
-        method:'PUT',
-        headers:{'Authorization':'token '+tok,'Accept':'application/vnd.github.v3+json','Content-Type':'application/json'},
-        body:JSON.stringify(body)
-      });
-    })
+function pushToFirebase(){
+  var url=fbUrl();
+  if(!url||_fbSyncing)return;
+  _fbSyncing=true;
+  updateSyncBadge('↑ Saving…','');
+  fetch(url+FIREBASE_PATH,{method:'PUT',headers:{'Content-Type':'application/json'},body:dataPayload()})
     .then(function(r){
-      _ghSyncing=false;
-      if(r&&(r.status===200||r.status===201)){
-        _lastSyncTime=new Date();
-        updateSyncBadge('✓ Synced '+_lastSyncTime.toLocaleTimeString(),true);
-      } else {
-        updateSyncBadge('⚠ Sync failed (check token)',false);
-      }
+      _fbSyncing=false;
+      if(r.ok){updateSyncBadge('✓ Synced '+new Date().toLocaleTimeString(),true);}
+      else{updateSyncBadge('⚠ Sync failed',false);console.error('Firebase PUT failed:',r.status);}
     })
     .catch(function(e){
-      _ghSyncing=false;
-      updateSyncBadge('⚠ Sync error: '+e.message,false);
-      console.error('GitHub push error:',e);
+      _fbSyncing=false;
+      updateSyncBadge('⚠ Offline',false);
+      console.error('Firebase push error:',e);
     });
 }
-function pullFromGitHub(callback){
-  // Fetch with cache-bust so we always get fresh data
-  fetch(GH_RAW+'?_='+Date.now(),{cache:'no-store'})
+function pullFromFirebase(callback){
+  var url=fbUrl();
+  if(!url){if(callback)callback();return;}
+  updateSyncBadge('↓ Loading…','');
+  fetch(url+FIREBASE_PATH+'?_='+Date.now(),{cache:'no-store'})
     .then(function(r){return r.ok?r.json():null;})
     .then(function(d){
       if(d&&d.team){
-        // Remote wins — it's the source of truth
         applyLoadedData(d);
-        try{localStorage.setItem(LS_KEY,JSON.stringify(d));}catch(e){}
-        updateSyncBadge('✓ Loaded from GitHub',true);
+        try{localStorage.setItem(LS_KEY,dataPayload());}catch(e){}
+        updateSyncBadge('✓ Synced '+new Date().toLocaleTimeString(),true);
+      } else {
+        updateSyncBadge(url?'⚠ No data in Firebase yet':'','');
       }
       if(callback)callback();
     })
-    .catch(function(){
-      // Remote unavailable — silently use localStorage
+    .catch(function(e){
+      updateSyncBadge('⚠ Offline — showing local data',false);
       if(callback)callback();
     });
 }
@@ -915,25 +903,36 @@ function rData(){
 function rSet(){
   if(!isAdmin)return '<div class="view-notice">&#128274; Settings are only available to admins.</div>';
   var h='';
-  // ── GitHub Sync section ────────────────────────────────────────────────────
-  var tok=ghToken();
+  // ── Firebase Sync section ────────────────────────────────────────────────
+  var curFbUrl=fbUrl();
   h+='<div style="background:#f0f7ff;border:1px solid #b5d0f5;border-radius:8px;padding:14px 16px;margin-bottom:18px">';
-  h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">';
+  h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">';
   h+='<span style="font-size:15px">&#9729;</span>';
-  h+='<span style="font-size:13px;font-weight:700;color:#1565c0">GitHub Sync</span>';
-  h+='<span id="sync-badge" style="font-size:11px;margin-left:8px;color:#888">'+(tok?'Token set':'No token — enter below to enable sync')+'</span>';
+  h+='<span style="font-size:13px;font-weight:700;color:#1565c0">Cloud Sync</span>';
+  h+='<span style="font-size:10px;color:'+(curFbUrl?'#2e7d32':'#e65100')+';margin-left:6px;font-weight:600">'+(curFbUrl?'✓ Connected':'⚠ Not configured')+'</span>';
   h+='</div>';
-  h+='<div style="font-size:11px;color:#444;margin-bottom:10px">Enter a GitHub Personal Access Token with <b>Contents: Read &amp; Write</b> on this repo. Once set, all browsers sync automatically.</div>';
-  h+='<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">';
-  h+='<input type="password" id="gh-tok-inp" placeholder="ghp_xxxxxxxxxxxx" value="'+(tok?'(token saved)':'')+'" style="flex:1;min-width:200px;font-size:12px;padding:6px 8px;border:1px solid #b5d0f5;border-radius:4px;font-family:monospace">';
-  h+='<button onclick="saveGhToken()" style="background:#1565c0;color:#fff;border:none;padding:6px 14px;border-radius:4px;font-size:12px;cursor:pointer">Save token</button>';
-  if(tok)h+='<button onclick="clearGhToken()" style="background:#c62828;color:#fff;border:none;padding:6px 14px;border-radius:4px;font-size:12px;cursor:pointer">Clear</button>';
-  if(tok)h+='<button onclick="pushToGitHub()" style="background:#2e7d32;color:#fff;border:none;padding:6px 14px;border-radius:4px;font-size:12px;cursor:pointer">&#8593; Push now</button>';
+  if(!curFbUrl){
+    h+='<div style="font-size:11px;color:#444;margin-bottom:10px;line-height:1.6">';
+    h+='To sync across all browsers and devices automatically:<br>';
+    h+='1. Go to <b>console.firebase.google.com</b> → create a free project<br>';
+    h+='2. Build → Realtime Database → Create database (start in <b>test mode</b>)<br>';
+    h+='3. Copy the database URL (e.g. <code>https://your-project-rtdb.firebaseio.com</code>)<br>';
+    h+='4. Paste it below and click Save → redeploy the file to GitHub<br>';
+    h+='</div>';
+  }
+  h+='<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">';
+  h+='<input type="text" id="fb-url-inp" placeholder="https://your-project-default-rtdb.firebaseio.com" value="'+curFbUrl+'" style="flex:1;min-width:260px;font-size:11px;padding:6px 8px;border:1px solid #b5d0f5;border-radius:4px;font-family:monospace">';
+  h+='<button onclick="saveFbUrl()" style="background:#1565c0;color:#fff;border:none;padding:6px 14px;border-radius:4px;font-size:12px;cursor:pointer">Save</button>';
+  if(curFbUrl){
+    h+='<button onclick="pushToFirebase()" style="background:#2e7d32;color:#fff;border:none;padding:6px 14px;border-radius:4px;font-size:12px;cursor:pointer">↑ Push now</button>';
+    h+='<button onclick="pullFromFirebase(function(){render();})" style="background:#005a52;color:#fff;border:none;padding:6px 14px;border-radius:4px;font-size:12px;cursor:pointer">↓ Pull now</button>';
+  }
   h+='</div>';
-  h+='<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">';
-  h+='<button onclick="exportData()" style="background:#555;color:#fff;border:none;padding:5px 12px;border-radius:4px;font-size:11px;cursor:pointer">&#8595; Export backup</button>';
-  h+='<button onclick="importData()" style="background:#555;color:#fff;border:none;padding:5px 12px;border-radius:4px;font-size:11px;cursor:pointer">&#8593; Import backup</button>';
-  h+='<span style="font-size:10px;color:#888;align-self:center">Manual file backup (no token needed)</span>';
+  h+='<div style="font-size:10px;color:#888;margin-bottom:10px">Once saved, all browsers and devices load data automatically from Firebase. No login needed per device.</div>';
+  h+='<div style="display:flex;gap:8px;flex-wrap:wrap">';
+  h+='<button onclick="exportData()" style="background:#555;color:#fff;border:none;padding:5px 12px;border-radius:4px;font-size:11px;cursor:pointer">↓ Export backup</button>';
+  h+='<button onclick="importData()" style="background:#555;color:#fff;border:none;padding:5px 12px;border-radius:4px;font-size:11px;cursor:pointer">↑ Import backup</button>';
+  h+='<span style="font-size:10px;color:#888;align-self:center">Manual file backup as fallback</span>';
   h+='</div>';
   h+='</div>';
 
@@ -1314,15 +1313,13 @@ window.setDocNote=function(id,docType,v){
   if(docType==='ltwp')m.ltwpNote=v;else m.visaNote=v;
   save();render();
 };
-window.saveGhToken=function(){
-  var inp=document.getElementById('gh-tok-inp');
+window.saveFbUrl=function(){
+  var inp=document.getElementById('fb-url-inp');
   if(!inp)return;
-  var t=inp.value.trim();
-  if(t&&t!=='(token saved)'){setGhToken(t);alert('Token saved. GitHub sync is now active.');}
+  var url=(inp.value||'').trim().replace(/\/+$/,'');
+  try{if(url)localStorage.setItem('moems_fb_url',url);else localStorage.removeItem('moems_fb_url');}catch(e){}
+  if(url){alert('Firebase URL saved! Update the FIREBASE_URL constant in the HTML file to make this permanent for all devices, then redeploy.');}
   render();
-};
-window.clearGhToken=function(){
-  setGhToken('');render();
 };
 window.AM=function(){if(!isAdmin)return;var inp=document.getElementById('nmi');if(!inp||!inp.value.trim())return;var n=new Date();var startDate=n.getFullYear()+'-'+p2(n.getMonth()+1)+'-'+p2(n.getDate());S.team.push({id:'t'+Date.now(),name:inp.value.trim(),segments:[{id:'s'+Date.now(),startDate:startDate,weeksOn:21,xDaysOn:0,weeksOff:14,xDaysOff:0}],annualBal:22,vacBal:0,workMode:'rotation',isExpat:false,travelDays:1});save();render();};
 window.addInc=function(){
@@ -1856,10 +1853,8 @@ function doImmigExport(){
 
 function startup(){
   checkRenewals();
-  if(ghToken()){
-    // Try to pull fresh data from GitHub, then render
-    updateSyncBadge('Loading…','');
-    pullFromGitHub(function(){
+  if(fbUrl()){
+    pullFromFirebase(function(){
       checkRenewals();
       render();
     });
