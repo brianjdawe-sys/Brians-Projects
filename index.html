@@ -191,7 +191,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#005a52}
     </div>
   </div>
   <div class="sp-header-right" style="gap:8px">
-    <span id="role-badge" class="sp-badge view">VIEW ONLY</span>
+    <span id="sync-badge" style="font-size:10px;color:#a0d4b0;margin-right:4px"></span><span id="role-badge" class="sp-badge view">VIEW ONLY</span>
     <button id="auth-btn" class="sp-btn" onclick="toggleAuth()">Admin Login</button>
   </div>
 </div>
@@ -364,6 +364,87 @@ var S={
 };
 // ── Stable key — never bump this again ─────────────────────────────────────
 var LS_KEY='moems_scheduler';
+// ── JSONBin sync — works on every browser/device automatically ───────────────
+var JB_KEY='$2a$10$zWN9Jc8FHH0bmO/uwKpm7utIOmvdvow6wWZS9zsJ021fxhEmqylYu';
+var JB_BIN_ID=''; // Auto-populated on first save. Paste your bin ID here to bake it in permanently.
+var JB_BASE='https://api.jsonbin.io/v3/b';
+var _jbSyncing=false;
+
+function jbBinId(){
+  if(JB_BIN_ID)return JB_BIN_ID;
+  try{return localStorage.getItem('moems_jb_bin')||'';}catch(e){return'';}
+}
+function jbSaveBinId(id){
+  try{localStorage.setItem('moems_jb_bin',id);}catch(e){}
+}
+function updateSyncBadge(msg,ok){
+  var el=document.getElementById('sync-badge');
+  if(!el)return;
+  el.textContent=msg;
+  el.style.color=ok===true?'#a0d4b0':ok===false?'#ffaaaa':'#ddd';
+}
+function jbPayload(){
+  return JSON.stringify({team:S.team,overrides:S.overrides,comments:S.comments,incidents:S.incidents,year:S.year,collapsed:S.collapsed});
+}
+function jbPush(){
+  if(_jbSyncing)return;
+  var binId=jbBinId();
+  if(!binId){
+    // No bin yet — create one
+    _jbSyncing=true;
+    updateSyncBadge('Creating cloud storage…','');
+    fetch(JB_BASE,{method:'POST',
+      headers:{'Content-Type':'application/json','X-Master-Key':JB_KEY,'X-Bin-Name':'MOEMs-Scheduler','X-Bin-Private':'false'},
+      body:jbPayload()})
+      .then(function(r){return r.json();})
+      .then(function(d){
+        _jbSyncing=false;
+        if(d&&d.metadata&&d.metadata.id){
+          jbSaveBinId(d.metadata.id);
+          updateSyncBadge('✓ Synced (Bin: '+d.metadata.id+')',true);
+          // Force re-render settings so bin ID shows
+          if(S.tab==='settings')render();
+        } else {
+          updateSyncBadge('⚠ Sync error',false);
+          console.error('JSONBin create failed:',d);
+        }
+      })
+      .catch(function(e){_jbSyncing=false;updateSyncBadge('⚠ Offline',false);});
+    return;
+  }
+  _jbSyncing=true;
+  updateSyncBadge('↑ Saving…','');
+  fetch(JB_BASE+'/'+binId,{method:'PUT',
+    headers:{'Content-Type':'application/json','X-Master-Key':JB_KEY},
+    body:jbPayload()})
+    .then(function(r){
+      _jbSyncing=false;
+      if(r.ok){updateSyncBadge('✓ Synced '+new Date().toLocaleTimeString(),true);}
+      else{updateSyncBadge('⚠ Sync failed',false);console.error('JSONBin PUT failed:',r.status);}
+    })
+    .catch(function(e){_jbSyncing=false;updateSyncBadge('⚠ Offline',false);});
+}
+function jbPull(callback){
+  var binId=jbBinId();
+  if(!binId){if(callback)callback();return;}
+  updateSyncBadge('↓ Loading…','');
+  fetch(JB_BASE+'/'+binId+'/latest',{cache:'no-store',
+    headers:{'X-Master-Key':JB_KEY}})
+    .then(function(r){return r.json();})
+    .then(function(resp){
+      var d=resp&&resp.record?resp.record:null;
+      if(d&&d.team){
+        applyLoadedData(d);
+        try{localStorage.setItem(LS_KEY,jbPayload());}catch(e){}
+        updateSyncBadge('✓ Synced '+new Date().toLocaleTimeString(),true);
+      }
+      if(callback)callback();
+    })
+    .catch(function(){
+      updateSyncBadge('⚠ Offline — using local data',false);
+      if(callback)callback();
+    });
+}
 function applyLoadedData(d){
   if(!d)return;
   if(d.team&&d.team.length){
@@ -591,10 +672,8 @@ window.importData=function(){
   inp.click();
 };
 function save(){
-  try{
-    var payload=JSON.stringify({team:S.team,overrides:S.overrides,comments:S.comments,incidents:S.incidents,year:S.year,collapsed:S.collapsed});
-    localStorage.setItem(LS_KEY,payload);
-  }catch(e){console.error('Save failed:',e);}
+  try{localStorage.setItem(LS_KEY,jbPayload());}catch(e){console.error('localStorage failed:',e);}
+  jbPush();
 }
 
 function segLabel(seg){
@@ -844,13 +923,27 @@ function rData(){
 function rSet(){
   if(!isAdmin)return '<div class="view-notice">&#128274; Settings are only available to admins.</div>';
   var h='';
-  // ── Export / Import ────────────────────────────────────────────────────
-  h+='<div style="background:#f0f7f7;border:1px solid #b0d8d4;border-radius:8px;padding:12px 16px;margin-bottom:18px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">';
-  h+='<span style="font-size:13px">&#128190;</span>';
-  h+='<span style="font-size:12px;font-weight:700;color:#005a52">Data backup</span>';
-  h+='<button onclick="exportData()" style="background:#005a52;color:#fff;border:none;padding:6px 14px;border-radius:4px;font-size:12px;cursor:pointer">↓ Export</button>';
-  h+='<button onclick="importData()" style="background:#1565c0;color:#fff;border:none;padding:6px 14px;border-radius:4px;font-size:12px;cursor:pointer">↑ Import</button>';
-  h+='<span style="font-size:10px;color:#888">Export saves a .json file you can import on another browser or device.</span>';
+  // ── Cloud Sync status ────────────────────────────────────────────────
+  var binId=jbBinId();
+  h+='<div style="background:#f0f7ff;border:1px solid #b5d0f5;border-radius:8px;padding:14px 16px;margin-bottom:18px">';
+  h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">';
+  h+='<span style="font-size:15px">&#9729;</span>';
+  h+='<span style="font-size:13px;font-weight:700;color:#1565c0">Cloud Sync (JSONBin)</span>';
+  h+='<span style="font-size:11px;font-weight:600;color:'+(binId?'#2e7d32':'#e65100')+'">'+(binId?'✓ Active':'⚠ Will activate on first save')+'</span>';
+  h+='</div>';
+  if(binId){
+    h+='<div style="font-size:11px;color:#444;margin-bottom:8px">All browsers and devices sync automatically. No setup needed on each device.</div>';
+    h+='<div style="background:#fff;border:1px solid #ddd;border-radius:4px;padding:8px 10px;font-family:monospace;font-size:11px;color:#1565c0;word-break:break-all;margin-bottom:8px">Bin ID: '+binId+'</div>';
+    h+='<div style="font-size:10px;color:#888;margin-bottom:8px">To make sync permanent across redeployments: open the HTML file, find <code>var JB_BIN_ID=\'\'</code> and paste your Bin ID between the quotes, then redeploy.</div>';
+    h+='<div style="display:flex;gap:8px;flex-wrap:wrap">';
+    h+='<button onclick="jbPush()" style="background:#2e7d32;color:#fff;border:none;padding:5px 12px;border-radius:4px;font-size:11px;cursor:pointer">↑ Push now</button>';
+    h+='<button onclick="jbPull(function(){render();})" style="background:#1565c0;color:#fff;border:none;padding:5px 12px;border-radius:4px;font-size:11px;cursor:pointer">↓ Pull now</button>';
+    h+='<button onclick="exportData()" style="background:#555;color:#fff;border:none;padding:5px 12px;border-radius:4px;font-size:11px;cursor:pointer">↓ Export backup</button>';
+    h+='<button onclick="importData()" style="background:#555;color:#fff;border:none;padding:5px 12px;border-radius:4px;font-size:11px;cursor:pointer">↑ Import backup</button>';
+    h+='</div>';
+  } else {
+    h+='<div style="font-size:11px;color:#444">Add a team member or make any change to activate cloud sync automatically.</div>';
+  }
   h+='</div>';
 
 
@@ -1764,7 +1857,10 @@ function doImmigExport(){
 
 function startup(){
   checkRenewals();
-  render();
+  jbPull(function(){
+    checkRenewals();
+    render();
+  });
 }
 if(document.readyState==='loading'){
   document.addEventListener('DOMContentLoaded',startup);
