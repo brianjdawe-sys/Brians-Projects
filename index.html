@@ -191,7 +191,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#005a52}
     </div>
   </div>
   <div class="sp-header-right" style="gap:8px">
-    <span id="sync-badge" style="font-size:10px;color:#a0d4b0"></span><span id="role-badge" class="sp-badge view">VIEW ONLY</span>
+    <span id="role-badge" class="sp-badge view">VIEW ONLY</span>
     <button id="auth-btn" class="sp-btn" onclick="toggleAuth()">Admin Login</button>
   </div>
 </div>
@@ -364,24 +364,6 @@ var S={
 };
 // ── Stable key — never bump this again ─────────────────────────────────────
 var LS_KEY='moems_scheduler';
-// ── Firebase Realtime Database sync ─────────────────────────────────────────
-// Set FIREBASE_URL to your Firebase Realtime Database URL, e.g.:
-// https://your-project-default-rtdb.firebaseio.com
-// Leave empty to use localStorage only.
-var FIREBASE_URL='';
-var FIREBASE_PATH='/moems.json';
-var _fbSyncing=false;
-function fbUrl(){
-  // Admin can override via localStorage for testing
-  try{var ov=localStorage.getItem('moems_fb_url');if(ov)return ov;}catch(e){}
-  return FIREBASE_URL;
-}
-function updateSyncBadge(msg,ok){
-  var el=document.getElementById('sync-badge');
-  if(!el)return;
-  el.textContent=msg;
-  el.style.color=ok?'#a0d4b0':ok===false?'#ffaaaa':'#ccc';
-}
 function applyLoadedData(d){
   if(!d)return;
   if(d.team&&d.team.length){
@@ -608,52 +590,11 @@ window.importData=function(){
   };
   inp.click();
 };
-function dataPayload(){
-  return JSON.stringify({team:S.team,overrides:S.overrides,comments:S.comments,incidents:S.incidents,year:S.year,collapsed:S.collapsed});
-}
 function save(){
-  // Write to localStorage immediately (instant, works offline)
-  try{localStorage.setItem(LS_KEY,dataPayload());}catch(e){console.error('localStorage save failed',e);}
-  // Push to Firebase async
-  pushToFirebase();
-}
-function pushToFirebase(){
-  var url=fbUrl();
-  if(!url||_fbSyncing)return;
-  _fbSyncing=true;
-  updateSyncBadge('↑ Saving…','');
-  fetch(url+FIREBASE_PATH,{method:'PUT',headers:{'Content-Type':'application/json'},body:dataPayload()})
-    .then(function(r){
-      _fbSyncing=false;
-      if(r.ok){updateSyncBadge('✓ Synced '+new Date().toLocaleTimeString(),true);}
-      else{updateSyncBadge('⚠ Sync failed',false);console.error('Firebase PUT failed:',r.status);}
-    })
-    .catch(function(e){
-      _fbSyncing=false;
-      updateSyncBadge('⚠ Offline',false);
-      console.error('Firebase push error:',e);
-    });
-}
-function pullFromFirebase(callback){
-  var url=fbUrl();
-  if(!url){if(callback)callback();return;}
-  updateSyncBadge('↓ Loading…','');
-  fetch(url+FIREBASE_PATH+'?_='+Date.now(),{cache:'no-store'})
-    .then(function(r){return r.ok?r.json():null;})
-    .then(function(d){
-      if(d&&d.team){
-        applyLoadedData(d);
-        try{localStorage.setItem(LS_KEY,dataPayload());}catch(e){}
-        updateSyncBadge('✓ Synced '+new Date().toLocaleTimeString(),true);
-      } else {
-        updateSyncBadge(url?'⚠ No data in Firebase yet':'','');
-      }
-      if(callback)callback();
-    })
-    .catch(function(e){
-      updateSyncBadge('⚠ Offline — showing local data',false);
-      if(callback)callback();
-    });
+  try{
+    var payload=JSON.stringify({team:S.team,overrides:S.overrides,comments:S.comments,incidents:S.incidents,year:S.year,collapsed:S.collapsed});
+    localStorage.setItem(LS_KEY,payload);
+  }catch(e){console.error('Save failed:',e);}
 }
 
 function segLabel(seg){
@@ -903,38 +844,15 @@ function rData(){
 function rSet(){
   if(!isAdmin)return '<div class="view-notice">&#128274; Settings are only available to admins.</div>';
   var h='';
-  // ── Firebase Sync section ────────────────────────────────────────────────
-  var curFbUrl=fbUrl();
-  h+='<div style="background:#f0f7ff;border:1px solid #b5d0f5;border-radius:8px;padding:14px 16px;margin-bottom:18px">';
-  h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">';
-  h+='<span style="font-size:15px">&#9729;</span>';
-  h+='<span style="font-size:13px;font-weight:700;color:#1565c0">Cloud Sync</span>';
-  h+='<span style="font-size:10px;color:'+(curFbUrl?'#2e7d32':'#e65100')+';margin-left:6px;font-weight:600">'+(curFbUrl?'✓ Connected':'⚠ Not configured')+'</span>';
+  // ── Export / Import ────────────────────────────────────────────────────
+  h+='<div style="background:#f0f7f7;border:1px solid #b0d8d4;border-radius:8px;padding:12px 16px;margin-bottom:18px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">';
+  h+='<span style="font-size:13px">&#128190;</span>';
+  h+='<span style="font-size:12px;font-weight:700;color:#005a52">Data backup</span>';
+  h+='<button onclick="exportData()" style="background:#005a52;color:#fff;border:none;padding:6px 14px;border-radius:4px;font-size:12px;cursor:pointer">↓ Export</button>';
+  h+='<button onclick="importData()" style="background:#1565c0;color:#fff;border:none;padding:6px 14px;border-radius:4px;font-size:12px;cursor:pointer">↑ Import</button>';
+  h+='<span style="font-size:10px;color:#888">Export saves a .json file you can import on another browser or device.</span>';
   h+='</div>';
-  if(!curFbUrl){
-    h+='<div style="font-size:11px;color:#444;margin-bottom:10px;line-height:1.6">';
-    h+='To sync across all browsers and devices automatically:<br>';
-    h+='1. Go to <b>console.firebase.google.com</b> → create a free project<br>';
-    h+='2. Build → Realtime Database → Create database (start in <b>test mode</b>)<br>';
-    h+='3. Copy the database URL (e.g. <code>https://your-project-rtdb.firebaseio.com</code>)<br>';
-    h+='4. Paste it below and click Save → redeploy the file to GitHub<br>';
-    h+='</div>';
-  }
-  h+='<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">';
-  h+='<input type="text" id="fb-url-inp" placeholder="https://your-project-default-rtdb.firebaseio.com" value="'+curFbUrl+'" style="flex:1;min-width:260px;font-size:11px;padding:6px 8px;border:1px solid #b5d0f5;border-radius:4px;font-family:monospace">';
-  h+='<button onclick="saveFbUrl()" style="background:#1565c0;color:#fff;border:none;padding:6px 14px;border-radius:4px;font-size:12px;cursor:pointer">Save</button>';
-  if(curFbUrl){
-    h+='<button onclick="pushToFirebase()" style="background:#2e7d32;color:#fff;border:none;padding:6px 14px;border-radius:4px;font-size:12px;cursor:pointer">↑ Push now</button>';
-    h+='<button onclick="pullFromFirebase(function(){render();})" style="background:#005a52;color:#fff;border:none;padding:6px 14px;border-radius:4px;font-size:12px;cursor:pointer">↓ Pull now</button>';
-  }
-  h+='</div>';
-  h+='<div style="font-size:10px;color:#888;margin-bottom:10px">Once saved, all browsers and devices load data automatically from Firebase. No login needed per device.</div>';
-  h+='<div style="display:flex;gap:8px;flex-wrap:wrap">';
-  h+='<button onclick="exportData()" style="background:#555;color:#fff;border:none;padding:5px 12px;border-radius:4px;font-size:11px;cursor:pointer">↓ Export backup</button>';
-  h+='<button onclick="importData()" style="background:#555;color:#fff;border:none;padding:5px 12px;border-radius:4px;font-size:11px;cursor:pointer">↑ Import backup</button>';
-  h+='<span style="font-size:10px;color:#888;align-self:center">Manual file backup as fallback</span>';
-  h+='</div>';
-  h+='</div>';
+
 
   // ── Section header helper ──
   function sh(icon,title,sub){
@@ -1313,14 +1231,7 @@ window.setDocNote=function(id,docType,v){
   if(docType==='ltwp')m.ltwpNote=v;else m.visaNote=v;
   save();render();
 };
-window.saveFbUrl=function(){
-  var inp=document.getElementById('fb-url-inp');
-  if(!inp)return;
-  var url=(inp.value||'').trim().replace(/\/+$/,'');
-  try{if(url)localStorage.setItem('moems_fb_url',url);else localStorage.removeItem('moems_fb_url');}catch(e){}
-  if(url){alert('Firebase URL saved! Update the FIREBASE_URL constant in the HTML file to make this permanent for all devices, then redeploy.');}
-  render();
-};
+
 window.AM=function(){if(!isAdmin)return;var inp=document.getElementById('nmi');if(!inp||!inp.value.trim())return;var n=new Date();var startDate=n.getFullYear()+'-'+p2(n.getMonth()+1)+'-'+p2(n.getDate());S.team.push({id:'t'+Date.now(),name:inp.value.trim(),segments:[{id:'s'+Date.now(),startDate:startDate,weeksOn:21,xDaysOn:0,weeksOff:14,xDaysOff:0}],annualBal:22,vacBal:0,workMode:'rotation',isExpat:false,travelDays:1});save();render();};
 window.addInc=function(){
   if(!isAdmin)return;
@@ -1853,14 +1764,7 @@ function doImmigExport(){
 
 function startup(){
   checkRenewals();
-  if(fbUrl()){
-    pullFromFirebase(function(){
-      checkRenewals();
-      render();
-    });
-  } else {
-    render();
-  }
+  render();
 }
 if(document.readyState==='loading'){
   document.addEventListener('DOMContentLoaded',startup);
