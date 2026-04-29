@@ -613,7 +613,8 @@ function computeTravelSet(mem,year){
 function invalidateTravelCache(){_travelCache={};}
 
 function dSt(mem,s){
-  // Priority: left > manual override > working > travel > holiday > off/flexible
+  // Priority: not-started > left > manual override > working > travel > holiday > off/flexible
+  if(mem.startDate&&s<mem.startDate)return'left';
   if(mem.endDate&&s>=mem.endDate)return'left';
   var ov=(S.overrides[s]||{})[mem.id];if(ov)return ov;
   var dow=new Date(s+'T00:00:00').getDay();
